@@ -37,9 +37,9 @@ func init() {
 		}
 	}
 	hgDetector := func(path string) (Scm, string) {
-		gitPath := findFolderInPath(path, ".hg")
-		if gitPath != "" {
-			return Hg{}, gitPath
+		hgPath := findFolderInPath(path, ".hg")
+		if hgPath != "" {
+			return Hg{}, hgPath
 		} else {
 			return nil, ""
 		}
