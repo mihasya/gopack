@@ -61,23 +61,25 @@ func GenerateConfig() (string, error) {
 			uniqueDeps[dep] = true
 		}
 	}
+	var repo = ""
 	for dep, _ := range uniqueDeps {
 		depPath, err := findDepInGopath(gopath, dep)
 		if err != nil {
 			return "", err
 		}
 		d := DepFromPath(depPath)
-		uniqueImports[d.Source] = d
-	}
-
-	for _, d := range uniqueImports {
 		if strings.HasSuffix(cwd, d.Import) {
-			// TODO: would be nice if the repo clause was always at the top of the config
-			// I guess map order is also not reliable, so we should do something else here
-			buf.WriteString(fmt.Sprintf("repo = \"%s\"\n\n", d.Import))
+			repo = d.Import
 		} else {
-			buf.WriteString(fmt.Sprintf(template, StripScmFromImport(d.Import), d.Import, d.CheckoutType(), d.CheckoutSpec, d.Provider, d.Source))
+			uniqueImports[d.Source] = d
+
 		}
+	}
+	if repo != "" {
+		buf.WriteString(fmt.Sprintf("repo = \"%s\"\n\n", repo))
+	}
+	for _, d := range uniqueImports {
+		buf.WriteString(fmt.Sprintf(template, StripScmFromImport(d.Import), d.Import, d.CheckoutType(), d.CheckoutSpec, d.Provider, d.Source))
 	}
 	return buf.String(), nil
 }
