@@ -151,11 +151,11 @@ type Hg struct{}
 
 // TODO someone should vet this that knows hg
 func (h Hg) Init(d *Dep) error {
-	scmPath := path.Join(pwd, VendorDir, d.Import)
+	scmPath := path.Join(pwd, VendorDir, "src", d.Import)
 	if err := os.MkdirAll(scmPath, 0755); err != nil {
 		return err
 	} else {
-		if _, err := os.Stat(fmt.Sprintf("%s/%s", scmPath, ".hg")); os.IsNotExist(err) {
+		if _, err := os.Stat(path.Join(scmPath, ".hg")); os.IsNotExist(err) {
 			cmd := exec.Command("hg", "clone", d.Source, scmPath)
 			if err := cmd.Run(); err != nil {
 				return err
@@ -183,7 +183,56 @@ func (h Hg) Checkout(d *Dep) error {
 }
 
 func (h Hg) PopulateDep(scmPath string, d *Dep) error {
-	return fmt.Errorf("Snapshotting hg deps not yet supported\n")
+	d.Provider = "hg"
+	d.SourceDir = scmPath
+	d.Import = path.Clean(strings.Split(scmPath, "/src/")[1])
+
+	hgId := exec.Command("hg", "id", "-i", "-b", "-t")
+	hgId.Dir = scmPath
+	outBytes, err := hgId.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Error determining hg repo state: %s", err)
+	}
+	out := strings.TrimSpace(string(outBytes))
+	parts := strings.Fields(out)
+
+	// due to my understanding of hg tags and branches as being very commonly mutated
+	// I am going to default to just grabbing the commit hash and adding tag/branch info
+	// to a "comment" field that will otherwise be ignored by gopack
+	d.CheckoutFlag = CommitFlag
+	d.CheckoutSpec = parts[0]
+
+	branch := parts[1]
+
+	hgrcBytes, err := ioutil.ReadFile(path.Join(scmPath, ".hg", "hgrc"))
+	if err != nil {
+		return fmt.Errorf("Unable to read .hg/hgrc: %s", err)
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(hgrcBytes))
+	foundPaths := false
+	var source = ""
+	branchPrefix := fmt.Sprintf("%s =", branch)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if foundPaths && strings.HasPrefix(line, branchPrefix) {
+			source = strings.TrimSpace(strings.Split(line, "=")[1])
+		}
+		// next section, eject
+		if foundPaths && strings.HasPrefix(line, "[") {
+			break
+		}
+		if strings.TrimSpace(line) == "[paths]" {
+			foundPaths = true
+		}
+	}
+
+	if source == "" {
+		return fmt.Errorf("Unable to determine source for hg repo %s", scmPath)
+	}
+
+	d.Source = source
+
+	return nil
 }
 
 func (h Hg) String() string {
