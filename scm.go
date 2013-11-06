@@ -244,7 +244,7 @@ type Svn struct {
 
 // FIXME someone that has an SVN repo accessible, please
 func (s Svn) Init(d *Dep) error {
-	return fmt.Errorf("Explicitly initializing SVN deps not yet supported\n")
+	return fmt.Errorf("Explicitly initializing SVN deps not yet supported")
 }
 
 func (s Svn) Checkout(d *Dep) error {
