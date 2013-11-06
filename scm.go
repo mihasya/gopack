@@ -66,18 +66,18 @@ type Scm interface {
 type Git struct{}
 
 func (g Git) Init(d *Dep) error {
-	path := fmt.Sprintf("%s/%s/src/%s", pwd, VendorDir, d.Import)
-	if err := os.MkdirAll(path, 0755); err != nil {
+	scmPath := path.Join(pwd, VendorDir, "src", d.Import)
+	if err := os.MkdirAll(scmPath, 0755); err != nil {
 		return fmt.Errorf("Error creating import dir %s", err)
 	} else {
-		if _, err := os.Stat(fmt.Sprintf("%s/%s", path, ".git")); os.IsNotExist(err) {
-			fmtcolor(Gray, "cloning %s to %s\n", d.Source, path)
-			cmd := exec.Command("git", "clone", d.Source, path)
+		if _, err := os.Stat(path.Join(scmPath, ".git")); os.IsNotExist(err) {
+			fmtcolor(Gray, "cloning %s to %s\n", d.Source, scmPath)
+			cmd := exec.Command("git", "clone", d.Source, scmPath)
 			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("Error cloning repo %s", err)
 			}
 		} else if err == nil {
-			log.Printf("Git dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again", d.Import, path)
+			log.Printf("Git dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again", d.Import, scmPath)
 		} else {
 			return fmt.Errorf("Error while examining git dir for %s: %s", d.Import, err)
 		}
@@ -105,8 +105,18 @@ func (g Git) PopulateDep(scmPath string, d *Dep) error {
 		d.CheckoutFlag = CommitFlag
 		d.CheckoutSpec = string(head)
 	} else if headParts[len(headParts)-2] == "heads" {
-		d.CheckoutFlag = BranchFlag
-		d.CheckoutSpec = headParts[len(headParts)-1]
+		// branches are fleeting, so we record a commit
+		// TODO: add a comment field of some kind to the config to store tag/branch data
+		branch := headParts[len(headParts)-1]
+
+		branchBytes, err := ioutil.ReadFile(path.Join(scmPath, ".git", "refs", "heads", branch))
+		if err != nil {
+			return fmt.Errorf("Unable to read head for %s branch %s: %s", scmPath, branch, err)
+		}
+
+		d.CheckoutSpec = strings.TrimSpace(string(branchBytes))
+		d.CheckoutFlag = CommitFlag
+
 	} else if headParts[len(headParts)-2] == "tags" {
 		d.CheckoutFlag = TagFlag
 		d.CheckoutSpec = headParts[len(headParts)-1]
