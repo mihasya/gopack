@@ -60,7 +60,7 @@ func GenerateConfig(stats *ProjectStats) (string, error) {
 		if strings.HasSuffix(cwd, d.Import) {
 			// TODO: would be nice if the repo clause was always at the top of the config
 			// I guess map order is also not reliable, so we should do something else here
-			buf.WriteString(fmt.Sprintf("repo = %s\n\n", d.Import))
+			buf.WriteString(fmt.Sprintf("repo = \"%s\"\n\n", d.Import))
 		} else {
 			buf.WriteString(fmt.Sprintf(template, StripScmFromImport(d.Import), d.Import, d.CheckoutType(), d.CheckoutSpec, d.Provider, d.Source))
 		}
