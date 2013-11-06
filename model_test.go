@@ -25,8 +25,8 @@ func createPath(path string) {
 }
 
 func createScmDep(scm string, project string, paths ...string) *Dep {
-	dep := &Dep{Import: project}
-	scmPath := path.Join(dep.Src(), scm)
+	scmPath := path.Join(project, scm)
+	dep := &Dep{Import: project, SourceDir: scmPath}
 	createPath(scmPath)
 
 	for _, p := range paths {

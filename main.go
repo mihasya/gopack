@@ -32,29 +32,37 @@ func main() {
 	if os.Getenv("GOPACK_SKIP_COLORS") == "1" {
 		showColors = false
 	}
-
-	// localize GOPATH
-	setupEnv()
-
 	p, err := AnalyzeSourceTree(".")
 	if err != nil {
 		fail(err)
 	}
 
-	deps := loadDependencies(".", p)
-
-  if deps == nil {
-    fail("Error loading dependency info")
-  }
-
+	// snapshot needs to happen before GOPATH is messed with
 	first := os.Args[1]
-	if first == "dependencytree" {
-		deps.PrintDependencyTree()
-	} else if first == "stats" {
-		p.PrintSummary()
+	if first == "snapshot" {
+		cfg, err := GenerateConfig(p)
+		if err != nil {
+			failf("Could not generate config: %s\n", err)
+		}
+		fmt.Println(cfg)
 	} else {
-		// run the specified command
-		runCommand(deps)
+		// localize GOPATH
+		setupEnv()
+
+		deps := loadDependencies(".", p)
+
+		if deps == nil {
+			fail("Error loading dependency info")
+		}
+
+		if first == "dependencytree" {
+			deps.PrintDependencyTree()
+		} else if first == "stats" {
+			p.PrintSummary()
+		} else {
+			// run the specified command
+			runCommand(deps)
+		}
 	}
 }
 

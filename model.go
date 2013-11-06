@@ -40,12 +40,40 @@ type Dep struct {
 	Provider string
 	// whence the Provider should clone/checkout
 	Source string
+
+	// where this dependency is currently residing
+	SourceDir string
 }
 
 func NewDependency(repo string) *Dep {
 	return &Dep{Import: repo}
 }
 
+func DepFromConfig(pwd string, depTree *toml.TomlTree) *Dep {
+	d := NewDependency(depTree.Get("import").(string))
+
+	d.setProvider(depTree)
+	d.setSource(depTree)
+
+	d.setCheckout(depTree, "branch", BranchFlag)
+	d.setCheckout(depTree, "commit", CommitFlag)
+	d.setCheckout(depTree, "tag", TagFlag)
+	d.SourceDir = fmt.Sprintf("%s/%s/src/%s", pwd, VendorDir, d.Import)
+	return d
+}
+
+func DepFromPath(scmPath string) *Dep {
+	d := &Dep{}
+	scm, root := DetectScm(scmPath)
+	if scm == nil {
+		failf("Unsupported SCM at %s\n", scmPath)
+	}
+	err := scm.PopulateDep(root, d)
+	if err != nil {
+		fail(err)
+	}
+	return d
+}
 func (d *Dependencies) IncludesDependency(importPath string) (*Node, bool) {
 	node := d.ImportGraph.Search(importPath)
 	return node, node != nil
@@ -105,12 +133,12 @@ func (d *Dependencies) VisitDeps(fn func(dep *Dep)) {
 }
 
 func (d *Dependencies) AnyDepsNeedFetching() bool {
-  for _, dep := range d.DepList {
-    if dep.fetch {
-      return true
-    }
-  }
-  return false
+	for _, dep := range d.DepList {
+		if dep.fetch {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *Dependencies) AllDepsNeedFetching() bool {
@@ -145,11 +173,14 @@ func (d *Dependencies) PrintDependencyTree() {
 }
 
 func (d *Dep) String() string {
-	if d.CheckoutType() != "" {
-		return fmt.Sprintf("import = %s, %s = %s, provider = %s", d.Import, d.CheckoutType(), d.CheckoutSpec, d.Provider)
+	tpl := "import = %s, %s, provider = %s, source = %s, root dir = %s"
+	var checkout string
+	if d.CheckoutType() == "" {
+		checkout = "[any]"
 	} else {
-		return fmt.Sprintf("import = %s", d.Import)
+		checkout = fmt.Sprintf("%s = %s", d.CheckoutType(), d.CheckoutSpec)
 	}
+	return fmt.Sprintf(tpl, d.Import, checkout, d.Provider, d.Source, d.SourceDir)
 }
 
 func (d *Dep) CheckoutType() string {
@@ -165,12 +196,16 @@ func (d *Dep) CheckoutType() string {
 }
 
 func (d *Dep) Src() string {
-	return fmt.Sprintf("%s/%s/src/%s", pwd, VendorDir, d.Import)
+	return d.SourceDir
 }
 
 // switch the dep to the appropriate branch or tag
 func (d *Dep) switchToBranchOrTag() error {
-	err := d.cdSrc()
+	current, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("Could not establish CWD: %s", err)
+	}
+	err = d.cdSrc()
 	if err != nil {
 		return err
 	}
@@ -187,7 +222,7 @@ func (d *Dep) switchToBranchOrTag() error {
 		}
 	}
 
-	return cdHome()
+	return os.Chdir(current)
 }
 
 // Tell the scm where the dependency is hosted.
@@ -248,10 +283,6 @@ func (d *Dep) cdSrc() error {
 		return err
 	}
 	return nil
-}
-
-func cdHome() error {
-	return os.Chdir(pwd)
 }
 
 func (d *Dep) LoadTransitiveDeps(importGraph *Graph) (*Dependencies, error) {
