@@ -58,7 +58,7 @@ func DepFromConfig(pwd string, depTree *toml.TomlTree) *Dep {
 	d.setCheckout(depTree, "branch", BranchFlag)
 	d.setCheckout(depTree, "commit", CommitFlag)
 	d.setCheckout(depTree, "tag", TagFlag)
-	d.SourceDir = fmt.Sprintf("%s/%s/src/%s", pwd, VendorDir, d.Import)
+	d.SourceDir = path.Join(pwd, VendorDir, "src", d.Import)
 	return d
 }
 

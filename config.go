@@ -7,6 +7,7 @@ import (
 	"github.com/pelletier/go-toml"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -21,7 +22,7 @@ type Config struct {
 }
 
 func NewConfig(dir string) *Config {
-	config := &Config{Path: fmt.Sprintf("%s/gopack.config", dir)}
+	config := &Config{Path: path.Join(dir, "gopack.config")}
 
 	t, err := toml.LoadFile(config.Path)
 	if err != nil {
