@@ -158,10 +158,9 @@ func (h Hg) Init(d *Dep) error {
 		if _, err := os.Stat(path.Join(scmPath, ".hg")); os.IsNotExist(err) {
 			cmd := exec.Command("hg", "clone", d.Source, scmPath)
 			if err := cmd.Run(); err != nil {
-				return err
+				return fmt.Errorf("Unable to hg clone %s %s: %s", d.Source, scmPath, err)
 			}
 		} else if err == nil {
-
 			log.Printf("Hg dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again", d.Import, scmPath)
 		} else {
 			return fmt.Errorf("Error while examining hg dir for %s: %s", d.Import, err)

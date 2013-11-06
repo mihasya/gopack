@@ -311,12 +311,12 @@ func (d *Dependencies) Validate(p *ProjectStats) []*ProjectError {
 		}
 	}
 
-	for _, dep := range d.DepList {
-		_, found := includedDeps[dep.Import]
-		if !found && !p.IsImportUsed(dep.Import) {
-			errors = append(errors, UnusedDependencyError(dep.Import))
-		}
-	}
+	/* for _, dep := range d.DepList { */
+	/* 	_, found := includedDeps[dep.Import] */
+	/* 	if !found && !p.IsImportUsed(dep.Import) { */
+	/* 		errors = append(errors, UnusedDependencyError(dep.Import)) */
+	/* 	} */
+	/* } */
 	return errors
 }
 

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"strings"
@@ -37,7 +39,7 @@ func findDepInGopath(gopath, dep string) (string, error) {
 	return "", fmt.Errorf("Could not find dependency %s in GOPATH %s", dep, gopath)
 }
 
-func GenerateConfig(stats *ProjectStats) (string, error) {
+func GenerateConfig() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("Could not get working dir: %s\n", err)
@@ -45,15 +47,27 @@ func GenerateConfig(stats *ProjectStats) (string, error) {
 	gopath := os.Getenv("GOPATH")
 	buf := bytes.NewBuffer(make([]byte, 0))
 	uniqueImports := make(map[string]*Dep)
-	for dep, stats := range stats.ImportStatsByPath {
-		if stats.Remote {
-			depPath, err := findDepInGopath(gopath, dep)
-			if err != nil {
-				return "", err
-			}
-			d := DepFromPath(depPath)
-			uniqueImports[d.Source] = d
+	depsListCmd := exec.Command("go", "list", "-f", `'{{join .Deps "\n"}}'`, "./...")
+	depsListCmd.Dir = cwd
+	depsBytes, err := depsListCmd.CombinedOutput()
+	if err != nil {
+		failf("Could not get list of dependencies: %s\n%s\n", err, string(depsBytes))
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(depsBytes))
+	uniqueDeps := make(map[string]bool)
+	for scanner.Scan() {
+		dep := scanner.Text()
+		if strings.Contains(dep, ".") {
+			uniqueDeps[dep] = true
 		}
+	}
+	for dep, _ := range uniqueDeps {
+		depPath, err := findDepInGopath(gopath, dep)
+		if err != nil {
+			return "", err
+		}
+		d := DepFromPath(depPath)
+		uniqueImports[d.Source] = d
 	}
 
 	for _, d := range uniqueImports {

@@ -40,7 +40,7 @@ func main() {
 	// snapshot needs to happen before GOPATH is messed with
 	first := os.Args[1]
 	if first == "snapshot" {
-		cfg, err := GenerateConfig(p)
+		cfg, err := GenerateConfig()
 		if err != nil {
 			failf("Could not generate config: %s\n", err)
 		}
@@ -81,6 +81,7 @@ func loadDependencies(root string, p *ProjectStats) *Dependencies {
 func loadConfiguration(dir string) (*Config, *Dependencies) {
 	importGraph := NewGraph()
 	config := NewConfig(dir)
+	fmt.Printf("Config: %s\n", config)
 	config.InitRepo(importGraph)
 
 	dependencies, err := config.LoadDependencyModel(importGraph)
