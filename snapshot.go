@@ -21,7 +21,7 @@ var ScmRe = regexp.MustCompile(`\w\.\w+/`)
 
 func StripScmFromImport(scmPath string) string {
 	parts := ScmRe.Split(scmPath, -1)
-	return parts[len(parts)-1]
+	return strings.Replace(parts[len(parts)-1], ".", "_", -1)
 }
 
 func findDepInGopath(gopath, dep string) (string, error) {
