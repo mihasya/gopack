@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -77,7 +76,7 @@ func (g Git) Init(d *Dep) error {
 				return fmt.Errorf("Error cloning repo %s", err)
 			}
 		} else if err == nil {
-			log.Printf("Git dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again", d.Import, scmPath)
+			fmtcolor(Gray, "Git dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again\n", d.Import, scmPath)
 		} else {
 			return fmt.Errorf("Error while examining git dir for %s: %s", d.Import, err)
 		}
@@ -161,7 +160,7 @@ func (h Hg) Init(d *Dep) error {
 				return fmt.Errorf("Unable to hg clone %s %s: %s", d.Source, scmPath, err)
 			}
 		} else if err == nil {
-			log.Printf("Hg dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again", d.Import, scmPath)
+			fmtcolor(Gray, "Hg dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again\n", d.Import, scmPath)
 		} else {
 			return fmt.Errorf("Error while examining hg dir for %s: %s", d.Import, err)
 		}

@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"regexp"
 	"strings"
@@ -39,7 +37,7 @@ func findDepInGopath(gopath, dep string) (string, error) {
 	return "", fmt.Errorf("Could not find dependency %s in GOPATH %s", dep, gopath)
 }
 
-func GenerateConfig() (string, error) {
+func GenerateConfig(p *ProjectStats) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("Could not get working dir: %s\n", err)
@@ -47,17 +45,29 @@ func GenerateConfig() (string, error) {
 	gopath := os.Getenv("GOPATH")
 	buf := bytes.NewBuffer(make([]byte, 0))
 	uniqueImports := make(map[string]*Dep)
-	depsListCmd := exec.Command("go", "list", "-f", `'{{join .Deps "\n"}}'`, "./...")
-	depsListCmd.Dir = cwd
-	depsBytes, err := depsListCmd.CombinedOutput()
-	if err != nil {
-		failf("Could not get list of dependencies: %s\n%s\n", err, string(depsBytes))
-	}
-	scanner := bufio.NewScanner(bytes.NewBuffer(depsBytes))
 	uniqueDeps := make(map[string]bool)
-	for scanner.Scan() {
-		dep := scanner.Text()
-		if strings.Contains(dep, ".") {
+	depsToAnalyze := make([]string, 0)
+	for dep, stats := range p.ImportStatsByPath {
+		if stats.Remote {
+			depsToAnalyze = append(depsToAnalyze, dep)
+		}
+	}
+
+	// recursively run dependency analysis to pull in transitive deps
+	for len(depsToAnalyze) > 0 {
+		dep := depsToAnalyze[0]
+		depsToAnalyze = depsToAnalyze[1:]
+		if _, alreadyAnalyzed := uniqueDeps[dep]; !alreadyAnalyzed {
+			depPath, err := findDepInGopath(gopath, dep)
+			if err != nil {
+				return "", err
+			}
+			depStats, err := AnalyzeSourceTree(depPath)
+			for subDep, subStats := range depStats.ImportStatsByPath {
+				if subStats.Remote {
+					depsToAnalyze = append(depsToAnalyze, subDep)
+				}
+			}
 			uniqueDeps[dep] = true
 		}
 	}
