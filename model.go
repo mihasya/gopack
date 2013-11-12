@@ -213,12 +213,12 @@ func (d *Dep) switchToBranchOrTag() error {
 	scm, err := d.Scm()
 
 	if err != nil {
-		log.Println(err)
+		return fmt.Errorf("error determining SCM for %s: %s", d, err)
 	} else {
 		err = scm.Checkout(d)
 
 		if err != nil {
-			log.Printf("error checking out %s on %s\n", d.CheckoutSpec, d.Import)
+			return fmt.Errorf("error checking out %s on %s\n", d.CheckoutSpec, d.Import)
 		}
 	}
 

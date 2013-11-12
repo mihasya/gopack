@@ -72,8 +72,8 @@ func (g Git) Init(d *Dep) error {
 		if _, err := os.Stat(path.Join(scmPath, ".git")); os.IsNotExist(err) {
 			fmtcolor(Gray, "cloning %s to %s\n", d.Source, scmPath)
 			cmd := exec.Command("git", "clone", d.Source, scmPath)
-			if err := cmd.Run(); err != nil {
-				return fmt.Errorf("Error cloning repo %s", err)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				return fmt.Errorf("Error cloning repo %s, output:\n%s", err, string(output))
 			}
 		} else if err == nil {
 			fmtcolor(Gray, "Git dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again\n", d.Import, scmPath)
@@ -156,8 +156,8 @@ func (h Hg) Init(d *Dep) error {
 	} else {
 		if _, err := os.Stat(path.Join(scmPath, ".hg")); os.IsNotExist(err) {
 			cmd := exec.Command("hg", "clone", d.Source, scmPath)
-			if err := cmd.Run(); err != nil {
-				return fmt.Errorf("Unable to hg clone %s %s: %s", d.Source, scmPath, err)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				return fmt.Errorf("Unable to hg clone %s %s: %s; output:\n%s", d.Source, scmPath, err, string(output))
 			}
 		} else if err == nil {
 			fmtcolor(Gray, "Hg dir exists for %s, skipping clone. To reset the source, run `rm -R %s`, then run gopack again\n", d.Import, scmPath)
