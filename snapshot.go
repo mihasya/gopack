@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -82,13 +83,19 @@ func GenerateConfig(p *ProjectStats) (string, error) {
 			repo = d.Import
 		} else {
 			uniqueImports[d.Source] = d
-
 		}
 	}
 	if repo != "" {
 		buf.WriteString(fmt.Sprintf("repo = \"%s\"\n\n", repo))
 	}
-	for _, d := range uniqueImports {
+
+	sortedImports := make([]string, 0, len(uniqueImports))
+	for key, _ := range uniqueImports {
+		sortedImports = append(sortedImports, key)
+	}
+	sort.Strings(sortedImports)
+	for _, key := range sortedImports {
+		d := uniqueImports[key]
 		buf.WriteString(fmt.Sprintf(template, StripScmFromImport(d.Import), d.Import, d.CheckoutType(), d.CheckoutSpec, d.Provider, d.Source))
 	}
 	return buf.String(), nil
